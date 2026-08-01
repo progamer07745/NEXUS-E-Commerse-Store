@@ -12,6 +12,7 @@ const Home = () => {
     const fetchProducts = async () => {
       try {
         const response = await api.get("/products");
+
         console.log(response.data.data.docs);
         setProducts(response.data.data.docs);
       } catch (error) {
