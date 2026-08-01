@@ -33,10 +33,10 @@ const App = () => {
               }
             >
               <Route index element={<AdminDashboard />} />
-              <Route path="/products" element={<AdminProducts />} />
-              <Route path="/orders" element={<AdminOrders />} />
-              <Route path="/categories" element={<AdminCategories />} />
-              <Route path="/users" element={<AdminUsers />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="categories" element={<AdminCategories />} />
+              <Route path="users" element={<AdminUsers />} />
             </Route>
 
             <Route element={<PublicLayout />}>
