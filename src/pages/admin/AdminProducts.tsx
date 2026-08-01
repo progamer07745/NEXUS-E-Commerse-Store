@@ -38,14 +38,14 @@ const AdminProducts = () => {
 
   const fetchProducts = async () => {
     const response = await api.get("/admin/products");
-    const items = response.data.data?.docs || [];
-    setProducts(items);
+    const items = response.data?.data?.docs ?? response.data?.data ?? [];
+    setProducts(Array.isArray(items) ? items : []);
   };
 
   const fetchCategories = async () => {
     const response = await api.get("/admin/categories");
-    const items = response.data.data?.docs || [];
-    setCategories(items);
+    const items = response.data?.data?.docs ?? response.data?.data ?? [];
+    setCategories(Array.isArray(items) ? items : []);
   };
 
   useEffect(() => {

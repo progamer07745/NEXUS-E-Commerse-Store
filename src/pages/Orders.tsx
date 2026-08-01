@@ -35,7 +35,8 @@ const OrdersPage = () => {
     const fetchOrders = async () => {
       try {
         const response = await api.get("/orders/my");
-        setOrders(response.data.data.orders || []);
+        const ordersData = response.data?.data?.orders ?? [];
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
       } catch (error) {
         console.error(error);
       } finally {

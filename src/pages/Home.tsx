@@ -12,11 +12,17 @@ const Home = () => {
     const fetchProducts = async () => {
       try {
         const response = await api.get("/products");
+        const productsData = response.data?.data?.docs ?? response.data?.data ?? [];
 
-        console.log(response.data.data.docs);
-        setProducts(response.data.data.docs);
+        if (!Array.isArray(productsData)) {
+          console.warn("Unexpected /products response shape", response.data);
+          setProducts([]);
+        } else {
+          setProducts(productsData);
+        }
       } catch (error) {
-        console.log(error);
+        console.error("Failed to load products", error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
