@@ -32,28 +32,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setTokenState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Prevent multiple automatic refresh attempts (helps avoid rate-limiter on prod)
+  // module-level guard
+  let refreshCalled = (window as any).__authRefreshCalled as boolean | undefined;
+  if (!refreshCalled) (window as any).__authRefreshCalled = false;
+
   useEffect(() => {
+    let isMounted = true;
+
     const restoreSession = async () => {
+      if ((window as any).__authRefreshCalled) return;
+      (window as any).__authRefreshCalled = true;
+
       try {
         const response = await api.get("/auth/refresh");
         const sessionUser = response.data.data?.user || response.data.data;
         const authToken = response.data.token;
 
-        if (sessionUser && authToken) {
+        if (isMounted && sessionUser && authToken) {
           setUser(sessionUser);
           setTokenState(authToken);
           setAuthToken(authToken);
         }
-      } catch (error) {
-        setUser(null);
-        setTokenState(null);
-        setAuthToken(null);
+      } catch (error: any) {
+        // If rate-limited, don't retry automatically; show anonymous session
+        if (error?.response?.status === 429) {
+          console.warn("Auth refresh rate-limited; skipping retries");
+        } else {
+          console.debug("No valid session found");
+        }
+
+        if (isMounted) {
+          setUser(null);
+          setTokenState(null);
+          setAuthToken(null);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
