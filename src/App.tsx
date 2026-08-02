@@ -14,14 +14,17 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminUsers from "./pages/admin/AdminUsers";
 import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
 import { CartProvider } from "./context/CartContext";
+import ToastContainer from "./components/ToastContainer";
 
 const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <CartProvider>
-          <Routes>
+        <ToastProvider>
+          <CartProvider>
+            <Routes>
             <Route path="/login" element={<LoginPage />} />
 
             <Route
@@ -47,7 +50,9 @@ const App = () => {
               <Route path="/orders" element={<OrdersPage />} />
             </Route>
           </Routes>
-        </CartProvider>
+            <ToastContainer />
+          </CartProvider>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

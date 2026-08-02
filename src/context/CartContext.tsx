@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { IProduct, IVariant } from "../types/product";
+import { useToast } from "./ToastContext";
 
 export interface CartProduct extends IProduct {
   quantity: number;
@@ -34,16 +35,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [items]);
 
+  const toast = useToast();
+
   const addToCart = (product: IProduct, quantity = 1, selectedVariant?: IVariant) => {
     setItems((prevItems) => {
       const existing = prevItems.find((item) => item._id === product._id);
       if (existing) {
-        return prevItems.map((item) =>
+        const updated = prevItems.map((item) =>
           item._id === product._id
             ? { ...item, quantity: item.quantity + quantity, selectedVariant: selectedVariant ?? item.selectedVariant }
             : item,
         );
+        // Notify user
+        toast.pushToast(`${product.name} quantity updated in cart`, "success");
+        return updated;
       }
+      // Notify user
+      toast.pushToast(`${product.name} added to cart`, "success");
       return [...prevItems, { ...product, quantity, selectedVariant }];
     });
   };
