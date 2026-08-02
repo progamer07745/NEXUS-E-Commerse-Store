@@ -58,12 +58,28 @@ const ProductDetails = () => {
       ? currentVariant.images
       : product?.images;
 
+  const handleOptionChange = (optionName: string, val: string) => {
+    const nextOptions = { ...selectedOptions, [optionName]: val };
+    setSelectedOptions(nextOptions);
+
+    const nextVariant = product?.variants?.find((variant) =>
+      variant.options.every((opt) => nextOptions[opt.name] === opt.value),
+    );
+    const nextImages = nextVariant?.images?.filter(Boolean) || [];
+    if (nextImages.length > 0) {
+      setSelectedImage(nextImages[0]);
+    }
+  };
+
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
         const response = await api.get(`/products/${id}`);
         const productData = (response.data.data || response.data) as IProduct;
         setProduct(productData);
+
+        const firstImage = productData.images?.[0] || productData.image || "";
+        setSelectedImage(firstImage);
 
         if (productData?.variants && productData.variants.length > 0) {
           const defaultValue =
@@ -74,12 +90,14 @@ const ProductDetails = () => {
           defaultValue.options.forEach((opt) => {
             defaultOptions[opt.name] = opt.value;
           });
+          const defaultImages = defaultValue.images?.filter(Boolean) || [];
+          if (defaultImages.length > 0) {
+            setSelectedImage(defaultImages[0]);
+          }
 
           setSelectedOptions(defaultOptions);
         }
-
-        setSelectedImage(productData.image);
-      } catch (_err: any) {
+      } catch {
         pushToast("Unable to load product details. Please try again.", "error");
       } finally {
         setLoading(false);
@@ -188,12 +206,7 @@ const ProductDetails = () => {
                           return (
                             <button
                               key={val}
-                              onClick={() =>
-                                setSelectedOptions((prev) => ({
-                                  ...prev,
-                                  [optionName]: val,
-                                }))
-                              }
+                              onClick={() => handleOptionChange(optionName, val)}
                               className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
                                 isSelected
                                   ? "border-[#172820] bg-[#172820] text-white shadow-sm"

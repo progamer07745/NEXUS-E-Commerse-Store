@@ -20,14 +20,19 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<CartProduct[]>([]);
-
-  useEffect(() => {
-    const storedCart = typeof window !== "undefined" ? localStorage.getItem("cart") : null;
-    if (storedCart) {
-      setItems(JSON.parse(storedCart));
+  const [items, setItems] = useState<CartProduct[]>(() => {
+    if (typeof window !== "undefined") {
+      const storedCart = localStorage.getItem("cart");
+      if (storedCart) {
+        try {
+          return JSON.parse(storedCart);
+        } catch {
+          return [];
+        }
+      }
     }
-  }, []);
+    return [];
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -37,22 +42,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const toast = useToast();
 
+  // Get the available stock for a product, accounting for selected variant
+  const getMaxStock = (product: IProduct, selectedVariant?: IVariant) => {
+    const stock = selectedVariant?.stock ?? product.stock;
+    return Math.max(0, Number(stock) || 0);
+  };
+
   const addToCart = (product: IProduct, quantity = 1, selectedVariant?: IVariant) => {
     setItems((prevItems) => {
       const existing = prevItems.find((item) => item._id === product._id);
+      const currentQty = existing?.quantity ?? 0;
+      // Use the variant that the existing item uses if no new variant was passed
+      const effectiveVariant = selectedVariant ?? existing?.selectedVariant;
+      const maxStock = getMaxStock(product, effectiveVariant);
+
+      // Validate stock before adding
+      if (currentQty + quantity > maxStock) {
+        toast.pushToast(
+          maxStock <= 0
+            ? `${product.name} is out of stock`
+            : `Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${product.name} available`,
+          "error",
+        );
+        return prevItems;
+      }
+
       if (existing) {
         const updated = prevItems.map((item) =>
           item._id === product._id
-            ? { ...item, quantity: item.quantity + quantity, selectedVariant: selectedVariant ?? item.selectedVariant }
+            ? { ...item, quantity: item.quantity + quantity, selectedVariant: effectiveVariant }
             : item,
         );
-        // Notify user
         toast.pushToast(`${product.name} quantity updated in cart`, "success");
         return updated;
       }
-      // Notify user
+
       toast.pushToast(`${product.name} added to cart`, "success");
-      return [...prevItems, { ...product, quantity, selectedVariant }];
+      return [...prevItems, { ...product, quantity, selectedVariant: effectiveVariant }];
     });
   };
 
@@ -63,7 +89,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const changeQuantity = (id: string, quantity: number) => {
     setItems((prevItems) =>
       prevItems
-        .map((item) => (item._id === id ? { ...item, quantity: Math.max(1, quantity) } : item))
+        .map((item) => {
+          if (item._id !== id) return item;
+          const maxStock = getMaxStock(item, item.selectedVariant);
+          const clamped = Math.min(Math.max(1, quantity), maxStock);
+          if (quantity > maxStock) {
+            toast.pushToast(`Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${item.name} available`, "error");
+          }
+          return { ...item, quantity: clamped };
+        })
         .filter((item) => item.quantity > 0),
     );
   };

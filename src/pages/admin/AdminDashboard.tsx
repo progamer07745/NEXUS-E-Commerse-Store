@@ -42,7 +42,8 @@ const AdminDashboard = () => {
         const payload = response.data.data;
         setStats(payload.stats);
         setRecentOrders(payload.recentOrders || []);
-      } catch (_error: any) {
+      } catch {
+        // ignore
       } finally {
         setLoading(false);
       }
@@ -52,16 +53,25 @@ const AdminDashboard = () => {
   }, []);
 
   if (loading) {
-    return <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 text-slate-300">Loading dashboard…</div>;
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-500">
+        Loading dashboard…
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (
-          <div key={card.label} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-400">{card.label}</p>
-            <p className="mt-4 text-3xl font-semibold text-white">
+          <div
+            key={card.label}
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
+              {card.label}
+            </p>
+            <p className="mt-4 text-3xl font-semibold text-slate-900">
               {card.key === "totalRevenue"
                 ? `$${(stats?.[card.key] || 0).toLocaleString()}`
                 : stats?.[card.key] ?? 0}
@@ -70,15 +80,15 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Recent orders</h3>
-          <span className="text-sm text-slate-400">Latest activity</span>
+          <h3 className="text-xl font-semibold text-slate-900">Recent orders</h3>
+          <span className="text-sm text-slate-500">Latest activity</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-slate-800 text-slate-400">
+            <thead className="border-b border-slate-200 text-slate-500">
               <tr>
                 <th className="px-3 py-3">Customer</th>
                 <th className="px-3 py-3">Status</th>
@@ -88,14 +98,20 @@ const AdminDashboard = () => {
             </thead>
             <tbody>
               {recentOrders.map((order) => (
-                <tr key={order._id} className="border-b border-slate-800/80">
+                <tr key={order._id} className="border-b border-slate-100">
                   <td className="px-3 py-3">
-                    <div className="font-medium text-white">{order.user?.name || "Guest"}</div>
-                    <div className="text-slate-400">{order.user?.email}</div>
+                    <div className="font-medium text-slate-900">
+                      {order.user?.name || "Guest"}
+                    </div>
+                    <div className="text-slate-500">{order.user?.email}</div>
                   </td>
-                  <td className="px-3 py-3 text-slate-300">{order.status}</td>
-                  <td className="px-3 py-3 text-slate-300">${order.totalOrderPrice}</td>
-                  <td className="px-3 py-3 text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td className="px-3 py-3 text-slate-700">{order.status}</td>
+                  <td className="px-3 py-3 text-slate-700">
+                    ${order.totalOrderPrice}
+                  </td>
+                  <td className="px-3 py-3 text-slate-500">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { IProduct } from "../types/product";
 import { useNavigate } from "react-router-dom";
 
@@ -5,8 +6,9 @@ interface ProductCardProps {
   product: IProduct;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+function ProductCard({ product }: ProductCardProps) {
   const navigate = useNavigate();
+  const imageSrc = product.image || product.images?.[0] || "";
 
   return (
     <div
@@ -14,11 +16,18 @@ export default function ProductCard({ product }: ProductCardProps) {
       className="group cursor-pointer flex flex-col"
     >
       <div className="aspect-[4/5] rounded-xl overflow-hidden mb-4 bg-[#f0edec] relative">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-        />
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={product.name}
+            loading="lazy"
+            className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[#737874] text-sm">
+            No image
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col flex-grow">
@@ -38,3 +47,5 @@ export default function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
+
+export default memo(ProductCard);
