@@ -15,6 +15,7 @@ const LoginPage = () => {
     passwordConfirm: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -30,6 +31,7 @@ const LoginPage = () => {
     event.preventDefault();
     setError("");
 
+    setLoading(true);
     try {
       if (mode === "login") {
         await login(form.email, form.password);
@@ -39,6 +41,8 @@ const LoginPage = () => {
     } catch (err: any) {
       setError("Unable to continue. Please check your credentials and try again.");
       pushToast(err?.response?.data?.message || "Unable to continue. Please check your credentials and try again.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,18 +60,20 @@ const LoginPage = () => {
         <div className="mb-6 flex rounded-full bg-slate-800 p-1">
           <button
             type="button"
+            disabled={loading}
             className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
               mode === "login" ? "bg-white text-slate-900" : "text-slate-300"
-            }`}
+            } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             onClick={() => setMode("login")}
           >
             Login
           </button>
           <button
             type="button"
+            disabled={loading}
             className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
               mode === "register" ? "bg-white text-slate-900" : "text-slate-300"
-            }`}
+            } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             onClick={() => setMode("register")}
           >
             Register
@@ -134,9 +140,19 @@ const LoginPage = () => {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-emerald-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400"
+            disabled={loading}
+            className="w-full rounded-lg bg-emerald-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {mode === "login" ? "Sign in" : "Create account"}
+            {loading ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950" />
+                {mode === "login" ? "Signing in..." : "Creating account..."}
+              </span>
+            ) : mode === "login" ? (
+              "Sign in"
+            ) : (
+              "Create account"
+            )}
           </button>
         </form>
       </div>
