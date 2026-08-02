@@ -42,8 +42,7 @@ const AdminDashboard = () => {
         const payload = response.data.data;
         setStats(payload.stats);
         setRecentOrders(payload.recentOrders || []);
-      } catch (error) {
-        console.error(error);
+      } catch (_error: any) {
       } finally {
         setLoading(false);
       }

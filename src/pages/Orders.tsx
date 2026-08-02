@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 interface OrderItem {
   product?: {
@@ -21,6 +22,7 @@ interface OrderRecord {
 
 const OrdersPage = () => {
   const { user, loading: authLoading } = useAuth();
+  const { pushToast } = useToast();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,8 +39,8 @@ const OrdersPage = () => {
         const response = await api.get("/orders/my");
         const ordersData = response.data?.data?.orders ?? [];
         setOrders(Array.isArray(ordersData) ? ordersData : []);
-      } catch (error) {
-        console.error(error);
+      } catch (error: any) {
+        pushToast("Unable to load your orders. Please try again later.", "error");
       } finally {
         setLoading(false);
       }

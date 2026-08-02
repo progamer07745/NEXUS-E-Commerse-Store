@@ -60,9 +60,7 @@ const CheckoutPage = () => {
       setSuccess("Order placed successfully! Your order is on its way.");
       clearCart();
       navigate("/");
-    } catch (err) {
-      // Debug log for developers; production hosts can configure log capture to avoid leaking sensitive info
-      console.error(err);
+    } catch (_err: any) {
       pushToast("Unable to place your order. Please try again.", "error");
       setError("Unable to place your order. Please try again.");
     } finally {

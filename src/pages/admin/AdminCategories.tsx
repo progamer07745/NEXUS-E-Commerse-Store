@@ -30,8 +30,7 @@ const AdminCategories = () => {
     const loadCategories = async () => {
       try {
         await fetchCategories();
-      } catch (error) {
-        console.error(error);
+      } catch (_error: any) {
       } finally {
         setLoading(false);
       }

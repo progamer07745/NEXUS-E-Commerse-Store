@@ -35,8 +35,7 @@ const AdminOrders = () => {
     const loadOrders = async () => {
       try {
         await fetchOrders();
-      } catch (error) {
-        console.error(error);
+      } catch (_error: any) {
       } finally {
         setLoading(false);
       }

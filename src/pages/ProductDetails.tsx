@@ -79,8 +79,7 @@ const ProductDetails = () => {
         }
 
         setSelectedImage(productData.image);
-      } catch (err: any) {
-        console.error(err);
+      } catch (_err: any) {
         pushToast("Unable to load product details. Please try again.", "error");
       } finally {
         setLoading(false);

@@ -53,8 +53,7 @@ const AdminProducts = () => {
       setLoading(true);
       try {
         await Promise.all([fetchProducts(), fetchCategories()]);
-      } catch (error) {
-        console.error(error);
+      } catch (_error: any) {
       } finally {
         setLoading(false);
       }
@@ -101,8 +100,7 @@ const AdminProducts = () => {
       const createdProduct = response.data.data?.doc || response.data.data?.product;
       setProducts((current) => [createdProduct, ...current]);
       setForm(defaultForm);
-    } catch (error) {
-      console.error(error);
+    } catch (_error: any) {
     } finally {
       setSaving(false);
     }
@@ -112,8 +110,7 @@ const AdminProducts = () => {
     try {
       await api.delete(`/admin/products/${productId}`);
       setProducts((current) => current.filter((product) => product._id !== productId));
-    } catch (error) {
-      console.error(error);
+    } catch (_error: any) {
     }
   };
 

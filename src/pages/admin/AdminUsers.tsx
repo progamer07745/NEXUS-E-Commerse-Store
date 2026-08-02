@@ -19,8 +19,7 @@ const AdminUsers = () => {
         const response = await api.get("/admin/users");
         const items = response.data.data?.docs || [];
         setUsers(items);
-      } catch (error) {
-        console.error(error);
+      } catch (_error: any) {
       } finally {
         setLoading(false);
       }

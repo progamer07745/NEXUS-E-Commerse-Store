@@ -3,8 +3,10 @@ import api from "../services/api";
 import type { IProduct } from "../types/product";
 import ProductCard from "../components/ProductCard";
 import Hero from "../components/Hero";
+import { useToast } from "../context/ToastContext";
 
 const Home = () => {
+  const { pushToast } = useToast();
   const [products, setProducts] = useState<IProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,13 +17,12 @@ const Home = () => {
         const productsData = response.data?.data?.docs ?? response.data?.data ?? [];
 
         if (!Array.isArray(productsData)) {
-          console.warn("Unexpected /products response shape", response.data);
           setProducts([]);
         } else {
           setProducts(productsData);
         }
-      } catch (error) {
-        console.error("Failed to load products", error);
+      } catch (error: any) {
+        pushToast("Unable to load products at the moment. Please refresh.", "error");
         setProducts([]);
       } finally {
         setLoading(false);

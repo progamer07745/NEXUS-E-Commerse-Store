@@ -57,9 +57,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error: any) {
         // If rate-limited, don't retry automatically; show anonymous session
         if (error?.response?.status === 429) {
-          console.warn("Auth refresh rate-limited; skipping retries");
+          // Skip retries if the refresh endpoint is rate-limited.
         } else {
-          console.debug("No valid session found");
+          // No valid session found.
         }
 
         if (isMounted) {
@@ -107,8 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await api.post("/auth/logout");
-    } catch (err) {
-      console.error("Logout failed", err);
+    } catch (_err) {
+      // Ignore logout failures on the client. The server will clear the cookie if possible.
     }
 
     setUser(null);

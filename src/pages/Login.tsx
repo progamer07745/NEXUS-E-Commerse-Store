@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const LoginPage = () => {
   const { user, login, register } = useAuth();
+  const { pushToast } = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({
@@ -34,9 +36,9 @@ const LoginPage = () => {
       } else {
         await register(form.name, form.email, form.password, form.passwordConfirm);
       }
-    } catch (err) {
+    } catch (err: any) {
       setError("Unable to continue. Please check your credentials and try again.");
-      console.error(err);
+      pushToast(err?.response?.data?.message || "Unable to continue. Please check your credentials and try again.", "error");
     }
   };
 
