@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
-import { useToast } from "../../context/ToastContext";
+import { useToast } from "../../context/toastContext";
 
 interface UserRecord {
   _id: string;
@@ -35,7 +35,7 @@ const AdminUsers = () => {
     };
 
     load();
-  }, []);
+  }, [pushToast]);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     if (newRole !== "user" && newRole !== "admin") return;

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api";
 import type { IProduct } from "../types/product";
-import { useCart } from "../context/CartContext";
-import { useToast } from "../context/ToastContext";
+import { useCart } from "../context/cartContext";
+import { useToast } from "../context/toastContext";
 
 const ProductDetails = () => {
   const { pushToast } = useToast();
@@ -104,7 +104,7 @@ const ProductDetails = () => {
       }
     };
     if (id) fetchProductDetails();
-  }, [id]);
+  }, [id, pushToast]);
 
   if (loading) {
     return (

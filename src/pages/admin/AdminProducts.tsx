@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import api from "../../services/api";
 import type { IProduct } from "../../types/product";
-import { useToast } from "../../context/ToastContext";
+import { useToast } from "../../context/toastContext";
 
 interface ICategoryOption {
   _id: string;
@@ -92,7 +92,7 @@ const AdminProducts = () => {
     };
 
     loadData();
-  }, []);
+  }, [pushToast]);
 
   const startEdit = (product: IProduct) => {
     setEditingId(product._id);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
-import { useToast } from "../../context/ToastContext";
+import { useToast } from "../../context/toastContext";
 
 interface OrderItem {
   product?: {
@@ -45,7 +45,7 @@ const AdminOrders = () => {
     };
 
     loadOrders();
-  }, []);
+  }, [pushToast]);
 
   const updateStatus = async (orderId: string, status: string) => {
     try {

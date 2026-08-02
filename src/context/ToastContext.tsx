@@ -1,18 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-
-interface Toast {
-  id: number;
-  message: string;
-  type?: "success" | "error" | "info";
-}
-
-interface ToastContextType {
-  toasts: Toast[];
-  pushToast: (message: string, type?: Toast["type"]) => void;
-  removeToast: (id: number) => void;
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+import { useMemo, useState, type ReactNode } from "react";
+import { ToastContext, type Toast, type ToastContextType } from "./toastContext";
 
 let nextId = 1;
 
@@ -28,15 +15,14 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
 
   const removeToast = (id: number) => setToasts((s) => s.filter((t) => t.id !== id));
 
+  const value = useMemo<ToastContextType>(
+    () => ({ toasts, pushToast, removeToast }),
+    [toasts],
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, pushToast, removeToast }}>
+    <ToastContext.Provider value={value}>
       {children}
     </ToastContext.Provider>
   );
-};
-
-export const useToast = () => {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast must be used within ToastProvider");
-  return ctx;
 };

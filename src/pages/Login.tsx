@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/authContext";
+import { useToast } from "../context/toastContext";
 
 const LoginPage = () => {
   const { user, login, register } = useAuth();

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/authContext";
+import { useToast } from "../context/toastContext";
 
 interface OrderItem {
   product?: {
@@ -39,7 +39,7 @@ const OrdersPage = () => {
         const response = await api.get("/orders/my");
         const ordersData = response.data?.data?.orders ?? [];
         setOrders(Array.isArray(ordersData) ? ordersData : []);
-      } catch (error: any) {
+      } catch {
         pushToast("Unable to load your orders. Please try again later.", "error");
       } finally {
         setLoading(false);
@@ -47,7 +47,7 @@ const OrdersPage = () => {
     };
 
     fetchOrders();
-  }, [user, navigate]);
+  }, [user, navigate, authLoading, pushToast]);
 
   if (loading) {
     return <div className="min-h-screen bg-slate-50 p-16 text-slate-700">Loading your orders…</div>;

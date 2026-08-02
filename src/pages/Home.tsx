@@ -3,7 +3,7 @@ import api from "../services/api";
 import type { IProduct } from "../types/product";
 import ProductCard from "../components/ProductCard";
 import Hero from "../components/Hero";
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../context/toastContext";
 
 const Home = () => {
   const { pushToast } = useToast();
@@ -21,7 +21,7 @@ const Home = () => {
         } else {
           setProducts(productsData);
         }
-      } catch (error: any) {
+      } catch {
         pushToast("Unable to load products at the moment. Please refresh.", "error");
         setProducts([]);
       } finally {
@@ -29,7 +29,7 @@ const Home = () => {
       }
     };
     fetchProducts();
-  }, []);
+  }, [pushToast]);
 
   return (
     <div>

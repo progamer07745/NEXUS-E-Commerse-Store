@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
-import { useCart } from "../context/CartContext";
-import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/authContext";
+import { useCart } from "../context/cartContext";
+import { useToast } from "../context/toastContext";
 
 const CheckoutPage = () => {
   const { pushToast } = useToast();
@@ -60,7 +60,7 @@ const CheckoutPage = () => {
       setSuccess("Order placed successfully! Your order is on its way.");
       clearCart();
       navigate("/");
-    } catch (_err: any) {
+    } catch {
       pushToast("Unable to place your order. Please try again.", "error");
       setError("Unable to place your order. Please try again.");
     } finally {

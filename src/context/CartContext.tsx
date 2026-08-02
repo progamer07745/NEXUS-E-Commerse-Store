@@ -1,23 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { IProduct, IVariant } from "../types/product";
-import { useToast } from "./ToastContext";
+import { useToast } from "./toastContext";
+import { CartContext, type CartProduct, type CartContextType } from "./cartContext";
 
-export interface CartProduct extends IProduct {
-  quantity: number;
-  selectedVariant?: IVariant;
-}
-
-interface CartContextType {
-  items: CartProduct[];
-  itemCount: number;
-  total: number;
-  addToCart: (product: IProduct, quantity?: number, selectedVariant?: IVariant) => void;
-  removeFromCart: (id: string) => void;
-  changeQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
-}
-
-const CartContext = createContext<CartContextType | undefined>(undefined);
+// Get the available stock for a product, accounting for selected variant
+const getMaxStock = (product: IProduct, selectedVariant?: IVariant) => {
+  const stock = selectedVariant?.stock ?? product.stock;
+  return Math.max(0, Number(stock) || 0);
+};
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartProduct[]>(() => {
@@ -42,67 +32,67 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const toast = useToast();
 
-  // Get the available stock for a product, accounting for selected variant
-  const getMaxStock = (product: IProduct, selectedVariant?: IVariant) => {
-    const stock = selectedVariant?.stock ?? product.stock;
-    return Math.max(0, Number(stock) || 0);
-  };
+  const addToCart = useCallback(
+    (product: IProduct, quantity = 1, selectedVariant?: IVariant) => {
+      setItems((prevItems) => {
+        const existing = prevItems.find((item) => item._id === product._id);
+        const currentQty = existing?.quantity ?? 0;
+        // Use the variant that the existing item uses if no new variant was passed
+        const effectiveVariant = selectedVariant ?? existing?.selectedVariant;
+        const maxStock = getMaxStock(product, effectiveVariant);
 
-  const addToCart = (product: IProduct, quantity = 1, selectedVariant?: IVariant) => {
-    setItems((prevItems) => {
-      const existing = prevItems.find((item) => item._id === product._id);
-      const currentQty = existing?.quantity ?? 0;
-      // Use the variant that the existing item uses if no new variant was passed
-      const effectiveVariant = selectedVariant ?? existing?.selectedVariant;
-      const maxStock = getMaxStock(product, effectiveVariant);
+        // Validate stock before adding
+        if (currentQty + quantity > maxStock) {
+          toast.pushToast(
+            maxStock <= 0
+              ? `${product.name} is out of stock`
+              : `Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${product.name} available`,
+            "error",
+          );
+          return prevItems;
+        }
 
-      // Validate stock before adding
-      if (currentQty + quantity > maxStock) {
-        toast.pushToast(
-          maxStock <= 0
-            ? `${product.name} is out of stock`
-            : `Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${product.name} available`,
-          "error",
-        );
-        return prevItems;
-      }
+        if (existing) {
+          const updated = prevItems.map((item) =>
+            item._id === product._id
+              ? { ...item, quantity: item.quantity + quantity, selectedVariant: effectiveVariant }
+              : item,
+          );
+          toast.pushToast(`${product.name} quantity updated in cart`, "success");
+          return updated;
+        }
 
-      if (existing) {
-        const updated = prevItems.map((item) =>
-          item._id === product._id
-            ? { ...item, quantity: item.quantity + quantity, selectedVariant: effectiveVariant }
-            : item,
-        );
-        toast.pushToast(`${product.name} quantity updated in cart`, "success");
-        return updated;
-      }
+        toast.pushToast(`${product.name} added to cart`, "success");
+        return [...prevItems, { ...product, quantity, selectedVariant: effectiveVariant }];
+      });
+    },
+    [toast],
+  );
 
-      toast.pushToast(`${product.name} added to cart`, "success");
-      return [...prevItems, { ...product, quantity, selectedVariant: effectiveVariant }];
-    });
-  };
-
-  const removeFromCart = (id: string) => {
+  const removeFromCart = useCallback((id: string) => {
     setItems((prevItems) => prevItems.filter((item) => item._id !== id));
-  };
+  }, []);
 
-  const changeQuantity = (id: string, quantity: number) => {
-    setItems((prevItems) =>
-      prevItems
-        .map((item) => {
-          if (item._id !== id) return item;
-          const maxStock = getMaxStock(item, item.selectedVariant);
-          const clamped = Math.min(Math.max(1, quantity), maxStock);
-          if (quantity > maxStock) {
-            toast.pushToast(`Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${item.name} available`, "error");
-          }
-          return { ...item, quantity: clamped };
-        })
-        .filter((item) => item.quantity > 0),
-    );
-  };
+  const changeQuantity = useCallback(
+    (id: string, quantity: number) => {
+      setItems((prevItems) =>
+        prevItems
+          .map((item) => {
+            if (item._id !== id) return item;
+            const maxStock = getMaxStock(item, item.selectedVariant);
+            const clamped = Math.min(Math.max(1, quantity), maxStock);
+            if (quantity > maxStock) {
+              toast.pushToast(`Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${item.name} available`, "error");
+            }
+            return { ...item, quantity: clamped };
+          })
+          .filter((item) => item.quantity > 0),
+      );
+    },
+    [toast],
+  );
 
-  const clearCart = () => setItems([]);
+  const clearCart = useCallback(() => setItems([]), []);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce(
@@ -110,18 +100,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     0,
   );
 
-  const value = useMemo(
+  const value = useMemo<CartContextType>(
     () => ({ items, itemCount, total, addToCart, removeFromCart, changeQuantity, clearCart }),
-    [items, itemCount, total],
+    [items, itemCount, total, addToCart, removeFromCart, changeQuantity, clearCart],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
 };

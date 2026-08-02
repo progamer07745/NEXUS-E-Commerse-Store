@@ -1,49 +1,21 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import api, { setAuthToken } from "../services/api";
-
-export interface IUserProfile {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-  isAdmin: boolean;
-}
-
-interface AuthContextType {
-  user: IUserProfile | null;
-  token: string | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, passwordConfirm: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext, type AuthContextType, type IUserProfile } from "./authContext";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<IUserProfile | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Prevent multiple automatic refresh attempts (helps avoid rate-limiter on prod)
-  // module-level guard
-  let refreshCalled = (window as any).__authRefreshCalled as boolean | undefined;
-  if (!refreshCalled) (window as any).__authRefreshCalled = false;
-
   useEffect(() => {
     let isMounted = true;
 
-    const restoreSession = async () => {
-      if ((window as any).__authRefreshCalled) return;
-      (window as any).__authRefreshCalled = true;
+    // Prevent multiple automatic refresh attempts (helps avoid rate-limiter on prod)
+    const authWindow = window as unknown as { __authRefreshCalled?: boolean };
+    if (authWindow.__authRefreshCalled) return;
+    authWindow.__authRefreshCalled = true;
 
+    const restoreSession = async () => {
       try {
         const response = await api.get("/auth/refresh");
         const sessionUser = response.data.data?.user || response.data.data;
@@ -54,14 +26,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTokenState(authToken);
           setAuthToken(authToken);
         }
-      } catch (error: any) {
+      } catch {
         // If rate-limited, don't retry automatically; show anonymous session
-        if (error?.response?.status === 429) {
-          // Skip retries if the refresh endpoint is rate-limited.
-        } else {
-          // No valid session found.
-        }
-
         if (isMounted) {
           setUser(null);
           setTokenState(null);
@@ -107,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await api.post("/auth/logout");
-    } catch (_err) {
+    } catch {
       // Ignore logout failures on the client. The server will clear the cookie if possible.
     }
 
@@ -116,20 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthToken(null);
   };
 
-  const value = useMemo(
+  const value = useMemo<AuthContextType>(
     () => ({ user, token, loading, login, register, logout }),
     [user, token, loading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside an AuthProvider");
-  }
-
-  return context;
 };

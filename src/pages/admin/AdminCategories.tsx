@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import api from "../../services/api";
-import { useToast } from "../../context/ToastContext";
+import { useToast } from "../../context/toastContext";
 
 interface CategoryRecord {
   _id: string;
@@ -40,7 +40,7 @@ const AdminCategories = () => {
     };
 
     loadCategories();
-  }, []);
+  }, [pushToast]);
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
