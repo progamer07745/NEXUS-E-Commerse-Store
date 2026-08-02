@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import api from "../services/api";
 import type { IProduct } from "../types/product";
 import { useCart } from "../context/CartContext";
+import { useToast } from "../context/ToastContext";
 
 const ProductDetails = () => {
+  const { pushToast } = useToast();
   const { id } = useParams();
 
   const [product, setProduct] = useState<IProduct | null>(null);
@@ -77,8 +79,9 @@ const ProductDetails = () => {
         }
 
         setSelectedImage(productData.image);
-      } catch (err) {
-        console.log(err);
+      } catch (err: any) {
+        console.error(err);
+        pushToast("Unable to load product details. Please try again.", "error");
       } finally {
         setLoading(false);
       }
@@ -110,8 +113,6 @@ const ProductDetails = () => {
 
   const isAvailable = (currentStock ?? 0) > 0;
 
-  console.log("current vairant", currentVariant);
-  console.log("Current stock", currentStock);
 
   return (
     <div
