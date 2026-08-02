@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api";
 import type { IProduct } from "../types/product";
@@ -7,7 +7,7 @@ import { useToast } from "../context/toastContext";
 
 const ProductDetails = () => {
   const { pushToast } = useToast();
-  const { id } = useParams();
+  const { slug } = useParams();
 
   const [product, setProduct] = useState<IProduct | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -50,15 +50,28 @@ const ProductDetails = () => {
 
   const currentVariant = getCurrentVariant();
 
+  // Variant price replaces the main price transparently - it is NOT an option button
   const currentPrice = currentVariant ? currentVariant.price : product?.price;
   const currentStock = currentVariant ? currentVariant.stock : product?.stock;
 
-  const activeImages =
-    currentVariant?.images && currentVariant.images.length > 0
-      ? currentVariant.images
-      : product?.images;
+  // Use the STOCK option value (e.g. "10 items") if present, otherwise numeric stock
+  const stockOption = currentVariant?.options.find(
+    (opt) => opt.name.toLowerCase() === "stock",
+  );
+  const effectiveStock = stockOption
+    ? Number(stockOption.value.replace(/\D/g, "")) || 0
+    : (currentStock ?? 0);
+
+  const activeImages = useMemo(() => {
+    const variantImages = currentVariant?.images?.filter(Boolean) || [];
+    const images = variantImages.length > 0 ? variantImages : product?.images || [];
+    return images.length > 0 ? images : product?.image ? [product.image] : [];
+  }, [currentVariant, product]);
 
   const handleOptionChange = (optionName: string, val: string) => {
+    // Never treat "stock" as a selectable option
+    if (optionName.toLowerCase() === "stock") return;
+
     const nextOptions = { ...selectedOptions, [optionName]: val };
     setSelectedOptions(nextOptions);
 
@@ -71,14 +84,53 @@ const ProductDetails = () => {
     }
   };
 
+  const handlePrevImage = () => {
+    if (activeImages.length <= 1) return;
+    const currentIndex = activeImages.indexOf(selectedImage);
+    const prevIndex = (currentIndex - 1 + activeImages.length) % activeImages.length;
+    setSelectedImage(activeImages[prevIndex]);
+  };
+
+  const handleNextImage = () => {
+    if (activeImages.length <= 1) return;
+    const currentIndex = activeImages.indexOf(selectedImage);
+    const nextIndex = (currentIndex + 1) % activeImages.length;
+    setSelectedImage(activeImages[nextIndex]);
+  };
+
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        const response = await api.get(`/products/${id}`);
-        const productData = (response.data.data || response.data) as IProduct;
+        // URL is "product-title-objectId" - backend parses trailing ObjectId,
+        // fall back to slug-only lookup if the compound lookup fails.
+        const rawSlug = slug || "";
+        const parts = rawSlug.split("-");
+        const potentialId = parts[parts.length - 1];
+        const isObjectId = /^[a-f\d]{24}$/i.test(potentialId || "");
+
+        let productData: IProduct | null = null;
+
+        if (isObjectId) {
+          try {
+            const response = await api.get(`/products/${rawSlug}`);
+            productData = (response.data.data || response.data) as IProduct;
+          } catch {
+            productData = null;
+          }
+        }
+
+        if (!productData) {
+          const slugOnly = rawSlug.replace(/-[a-f\d]{24}$/i, "");
+          const response = await api.get(`/products/slug/${slugOnly}`);
+          productData =
+            (response.data.data?.product ||
+              response.data.data ||
+              response.data) as IProduct;
+        }
+
         setProduct(productData);
 
-        const firstImage = productData.images?.[0] || productData.image || "";
+        const firstImage = productData?.images?.[0] || productData?.image || "";
         setSelectedImage(firstImage);
 
         if (productData?.variants && productData.variants.length > 0) {
@@ -88,7 +140,10 @@ const ProductDetails = () => {
           const defaultOptions: { [key: string]: string } = {};
 
           defaultValue.options.forEach((opt) => {
-            defaultOptions[opt.name] = opt.value;
+            // Never auto-select a "stock" option - handled behind the scenes
+            if (opt.name.toLowerCase() !== "stock") {
+              defaultOptions[opt.name] = opt.value;
+            }
           });
           const defaultImages = defaultValue.images?.filter(Boolean) || [];
           if (defaultImages.length > 0) {
@@ -103,8 +158,8 @@ const ProductDetails = () => {
         setLoading(false);
       }
     };
-    if (id) fetchProductDetails();
-  }, [id, pushToast]);
+    if (slug) fetchProductDetails();
+  }, [slug, pushToast]);
 
   if (loading) {
     return (
@@ -128,9 +183,8 @@ const ProductDetails = () => {
     );
   }
 
-  const isAvailable = (currentStock ?? 0) > 0;
-
-
+  const isAvailable = effectiveStock > 0;
+  const isLowStock = isAvailable && effectiveStock <= 10;
   return (
     <div
       className="min-h-screen flex flex-col bg-[#fcf9f8] text-left"
@@ -138,20 +192,70 @@ const ProductDetails = () => {
     >
       <main className="flex-grow max-w-[1280px] w-full mx-auto px-6 md:px-12 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 items-start">
-          {/* قسم الصور */}
+          {/* Images section */}
           <div className="space-y-4">
-            <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-[#f0edec] border border-[#c2c8c3]/20">
+            <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-[#f0edec] border border-[#c2c8c3]/20">
               <img
                 src={selectedImage || product.image}
                 alt={product.name}
                 className="w-full h-full object-cover object-center"
               />
+
+              {/* Smooth gallery navigation */}
+              {activeImages.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    aria-label="Previous image"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-[#c2c8c3]/30 flex items-center justify-center text-[#172820] shadow-md hover:bg-white transition-all"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    aria-label="Next image"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-[#c2c8c3]/30 flex items-center justify-center text-[#172820] shadow-md hover:bg-white transition-all"
+                  >
+                    ›
+                  </button>
+
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {activeImages.map((img, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(img)}
+                        aria-label={`Go to image ${index + 1}`}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          selectedImage === img
+                            ? "bg-[#172820] scale-110"
+                            : "bg-white/70 hover:bg-white"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* لو فيه صور فرعية إضافية (Images Array) نعرضها كمعرض مصغر */}
-            {product.images && product.images.length > 0 && (
+            {/* Persistent real-time stock warning under product images */}
+            {!isAvailable ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                Stock is finished
+              </div>
+            ) : isLowStock ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                ⚠ {effectiveStock} is remaining in the stock
+              </div>
+            ) : (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                ✓ In stock
+              </div>
+            )}
+
+            {/* Thumbnail gallery */}
+            {activeImages.length > 1 && (
               <div className="flex gap-4 overflow-x-auto pb-2">
-                {activeImages?.map((img, index) => (
+                {activeImages.map((img, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(img)}
@@ -186,40 +290,51 @@ const ProductDetails = () => {
             <div className="text-2xl font-bold text-[#172820]">
               {currentPrice}{" "}
               <span className="text-sm font-normal text-[#737874]">EGP</span>
+              {currentVariant && (
+                <span className="ml-3 text-xs font-semibold uppercase tracking-wide text-[#545f73] bg-[#f0edec] px-2.5 py-1 rounded-full">
+                  Selected variant
+                </span>
+              )}
             </div>
 
             {Object.keys(availableOptions).length > 0 && (
               <div className="space-y-4 py-4 border-t border-b border-[#c2c8c3]/20">
                 {Object.entries(availableOptions).map(
-                  ([optionName, values]) => (
-                    <div key={optionName} className="space-y-2">
-                      <label className="text-sm font-semibold uppercase tracking-wider text-[#172820]">
-                        {optionName}:{" "}
-                        <span className="font-normal text-[#545f73]">
-                          {selectedOptions[optionName]}
-                        </span>
-                      </label>
-                      <div className="flex gap-3 flex-wrap">
-                        {values.map((val) => {
-                          const isSelected =
-                            selectedOptions[optionName] === val;
-                          return (
-                            <button
-                              key={val}
-                              onClick={() => handleOptionChange(optionName, val)}
-                              className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                isSelected
-                                  ? "border-[#172820] bg-[#172820] text-white shadow-sm"
-                                  : "border-[#c2c8c3]/40 bg-white text-[#172820] hover:border-[#172820]"
-                              }`}
-                            >
-                              {val}
-                            </button>
-                          );
-                        })}
+                  ([optionName, values]) => {
+                    // NEVER render "stock" as a selectable option button
+                    if (optionName.toLowerCase() === "stock") return null;
+                    return (
+                      <div key={optionName} className="space-y-2">
+                        <label className="text-sm font-semibold uppercase tracking-wider text-[#172820]">
+                          {optionName}:{" "}
+                          <span className="font-normal text-[#545f73]">
+                            {selectedOptions[optionName]}
+                          </span>
+                        </label>
+                        <div className="flex gap-3 flex-wrap">
+                          {values.map((val) => {
+                            const isSelected =
+                              selectedOptions[optionName] === val;
+                            return (
+                              <button
+                                key={val}
+                                onClick={() =>
+                                  handleOptionChange(optionName, val)
+                                }
+                                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                  isSelected
+                                    ? "border-[#172820] bg-[#172820] text-white shadow-sm"
+                                    : "border-[#c2c8c3]/40 bg-white text-[#172820] hover:border-[#172820]"
+                                }`}
+                              >
+                                {val}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ),
+                    );
+                  },
                 )}
               </div>
             )}
@@ -233,9 +348,7 @@ const ProductDetails = () => {
               <p>
                 Availability:{" "}
                 <span className="text-[#172820] font-semibold">
-                  {currentStock && currentStock > 0
-                    ? "In Stock"
-                    : "Out of Stock"}
+                  {isAvailable ? "In Stock" : "Out of Stock"}
                 </span>
               </p>
               <p>

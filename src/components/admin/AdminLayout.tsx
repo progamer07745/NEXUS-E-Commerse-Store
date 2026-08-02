@@ -36,6 +36,7 @@ const AdminLayout = () => {
               <NavLink
                 key={link.to}
                 to={link.to}
+                end={link.to === "/admin"}
                 className={({ isActive }) =>
                   `block rounded-lg px-4 py-3 text-sm font-medium transition ${
                     isActive

@@ -16,7 +16,7 @@ interface VariantFormOption {
 interface VariantForm {
   price: string;
   stock: string;
-  images: string;
+  images: string[];
   options: VariantFormOption[];
 }
 
@@ -27,7 +27,7 @@ interface ProductFormState {
   stock: string;
   brand: string;
   image: string;
-  images: string;
+  images: string[];
   category: string;
   slug: string;
   status: string;
@@ -37,7 +37,7 @@ interface ProductFormState {
 const emptyVariant = (): VariantForm => ({
   price: "",
   stock: "",
-  images: "",
+  images: [],
   options: [{ name: "Color", value: "Default" }],
 });
 
@@ -48,7 +48,7 @@ const createDefaultForm = (): ProductFormState => ({
   stock: "",
   brand: "",
   image: "",
-  images: "",
+  images: [],
   category: "",
   slug: "",
   status: "active",
@@ -103,14 +103,14 @@ const AdminProducts = () => {
       stock: String(product.stock ?? ""),
       brand: product.brand || "",
       image: product.image || "",
-      images: (product.images || []).join("\n"),
+      images: product.images || [],
       category: typeof product.category === "object" ? product.category._id : (product.category as unknown as string) || "",
       slug: product.slug || "",
       status: product.status || "active",
       variants: (product.variants || []).map((variant) => ({
         price: String(variant.price ?? ""),
         stock: String(variant.stock ?? ""),
-        images: (variant.images || []).join("\n"),
+        images: variant.images || [],
         options:
           variant.options && variant.options.length > 0
             ? variant.options.map((opt) => ({ name: opt.name, value: opt.value }))
@@ -154,11 +154,8 @@ const AdminProducts = () => {
     }));
   };
 
-  const buildImageList = (raw: string): string[] =>
-    raw
-      .split("\n")
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0);
+  const buildImageList = (urls: string[]): string[] =>
+    (urls || []).map((url) => url.trim()).filter((url) => url.length > 0);
 
   const buildPayload = () => {
     const mainImage = form.image || FALLBACK_IMAGE;
@@ -365,14 +362,49 @@ const AdminProducts = () => {
               className={inputClass}
             />
           </div>
-          <div>
-            <label className={labelClass}>Gallery images (one URL per line)</label>
-            <textarea
-              value={form.images}
-              onChange={(event) => setForm({ ...form, images: event.target.value })}
-              className={`${inputClass} min-h-20`}
-              placeholder={"https://...jpg\nhttps://...png"}
-            />
+          <div className="md:col-span-2">
+            <label className={labelClass}>Gallery images</label>
+            <div className="space-y-2">
+              {form.images.map((imageUrl, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    value={imageUrl}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        images: prev.images.map((url, i) =>
+                          i === index ? event.target.value : url,
+                        ),
+                      }))
+                    }
+                    className={inputClass}
+                    placeholder={`Image ${index + 1} URL`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        images: prev.images.filter((_, i) => i !== index),
+                      }))
+                    }
+                    className="shrink-0 rounded-lg border border-rose-300 px-3 py-2 text-sm text-rose-600 transition hover:bg-rose-50"
+                    title="Remove image"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setForm((prev) => ({ ...prev, images: [...prev.images, ""] }))
+              }
+              className="mt-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              + Add Image
+            </button>
           </div>
 
           {/* Variants section */}
@@ -492,13 +524,48 @@ const AdminProducts = () => {
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className={labelClass}>Variant images (one URL per line)</label>
-                      <textarea
-                        value={variant.images}
-                        onChange={(event) => updateVariant(variantIndex, { images: event.target.value })}
-                        className={`${inputClass} min-h-16`}
-                        placeholder="https://...jpg"
-                      />
+                      <label className={labelClass}>Variant images</label>
+                      <div className="space-y-2">
+                        {variant.images.map((imageUrl, imageIndex) => (
+                          <div key={imageIndex} className="flex gap-2">
+                            <input
+                              value={imageUrl}
+                              onChange={(event) =>
+                                updateVariant(variantIndex, {
+                                  images: variant.images.map((url, i) =>
+                                    i === imageIndex ? event.target.value : url,
+                                  ),
+                                })
+                              }
+                              className={inputClass}
+                              placeholder={`Variant image ${imageIndex + 1} URL`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateVariant(variantIndex, {
+                                  images: variant.images.filter((_, i) => i !== imageIndex),
+                                })
+                              }
+                              className="shrink-0 rounded-lg border border-rose-300 px-3 py-2 text-sm text-rose-600 transition hover:bg-rose-50"
+                              title="Remove image"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateVariant(variantIndex, {
+                            images: [...variant.images, ""],
+                          })
+                        }
+                        className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-white"
+                      >
+                        + Add Image
+                      </button>
                     </div>
                   </div>
                 </div>

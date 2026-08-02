@@ -12,7 +12,7 @@ function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div
-      onClick={() => navigate(`/products/${product._id}`)}
+      onClick={() => navigate(`/products/${product.slug || product.name}-${product._id}`)}
       className="group cursor-pointer flex flex-col"
     >
       <div className="aspect-[4/5] rounded-xl overflow-hidden mb-4 bg-[#f0edec] relative">
