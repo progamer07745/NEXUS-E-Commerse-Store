@@ -4,9 +4,9 @@ import { useAuth } from "../../context/authContext";
 const links = [
   { to: "/admin", label: "Overview" },
   { to: "/admin/products", label: "Products" },
-  { to: "/admin/orders", label: "Orders" },
-  { to: "/admin/categories", label: "Categories" },
-  { to: "/admin/users", label: "Users" },
+  // { to: "/admin/orders", label: "Orders" },
+  // { to: "/admin/categories", label: "Categories" },
+  // { to: "/admin/users", label: "Users" },
 ];
 
 const AdminLayout = () => {
