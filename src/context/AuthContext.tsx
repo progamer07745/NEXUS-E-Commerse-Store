@@ -15,7 +15,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let isMounted = true;
 
     // Prevent multiple automatic refresh attempts (helps avoid rate-limiter on prod)
-
     const restoreSession = async () => {
       try {
         const response = await api.get("/auth/refresh");

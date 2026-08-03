@@ -1,13 +1,12 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: String(import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/+$/, ""),
+  baseURL: String("http://localhost:4000").replace(/\/+$/, ""),
   headers: {
     "Content-Type": "application/json",
   },
   withCredentials: true,
 });
-
 
 export const setAuthToken = (token: string | null) => {
   if (token) {
