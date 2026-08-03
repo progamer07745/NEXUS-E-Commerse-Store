@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import api, { setAuthToken } from "../services/api";
-import { AuthContext, type AuthContextType, type IUserProfile } from "./authContext";
+import {
+  AuthContext,
+  type AuthContextType,
+  type IUserProfile,
+} from "./authContext";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<IUserProfile | null>(null);
@@ -11,9 +15,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let isMounted = true;
 
     // Prevent multiple automatic refresh attempts (helps avoid rate-limiter on prod)
-    const authWindow = window as unknown as { __authRefreshCalled?: boolean };
-    if (authWindow.__authRefreshCalled) return;
-    authWindow.__authRefreshCalled = true;
 
     const restoreSession = async () => {
       try {
@@ -55,7 +56,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthToken(authToken);
   };
 
-  const register = async (name: string, email: string, password: string, passwordConfirm: string) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    passwordConfirm: string,
+  ) => {
     const response = await api.post("/auth/register", {
       name,
       email,

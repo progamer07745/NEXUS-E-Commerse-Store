@@ -48,7 +48,7 @@ const CartPage = () => {
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">{item.name}</h2>
                     <p className="mt-1 text-sm text-slate-500">{item.brand}</p>
-                    <p className="mt-2 text-slate-700">${(item.selectedVariant?.price ?? item.price).toFixed(2)}</p>
+                    <p className="mt-2 text-slate-700">{item.price.toFixed(2)}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button

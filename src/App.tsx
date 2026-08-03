@@ -16,9 +16,6 @@ const LoginPage = lazy(() => import("./pages/Login"));
 const OrdersPage = lazy(() => import("./pages/Orders"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
-const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
-const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 
 const PageFallback = () => (
   <div className="flex min-h-[60vh] items-center justify-center bg-slate-50 text-slate-500">
@@ -46,9 +43,6 @@ const App = () => {
                 >
                   <Route index element={<AdminDashboard />} />
                   <Route path="products" element={<AdminProducts />} />
-                  <Route path="orders" element={<AdminOrders />} />
-                  <Route path="categories" element={<AdminCategories />} />
-                  <Route path="users" element={<AdminUsers />} />
                 </Route>
 
                 <Route element={<PublicLayout />}>

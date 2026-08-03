@@ -47,10 +47,11 @@ const CheckoutPage = () => {
 
     try {
       await api.post("/orders", {
+        // NOTE: we deliberately do NOT send the price from the client.
+        // The server recalculates it from the database to prevent tampering.
         orderItems: items.map((item) => ({
           product: item._id,
           quantity: item.quantity,
-          price: item.selectedVariant?.price ?? item.price,
         })),
         shippingAddress: shipping,
         paymentMethodType: paymentMethod,
@@ -160,7 +161,7 @@ const CheckoutPage = () => {
                 disabled={loading}
                 className="w-full rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {loading ? "Placing order..." : `Pay $${total.toFixed(2)}`}
+                {loading ? "Placing order..." : `Pay ${total.toFixed(2)} EGP`}
               </button>
             </div>
           </form>
@@ -168,20 +169,20 @@ const CheckoutPage = () => {
           <aside className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-900">Order summary</h2>
             <div className="mt-4 space-y-4">
-              {items.map((item) => (
-                <div key={item._id} className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-slate-900">{item.name}</p>
-                    <p className="text-sm text-slate-500">{item.quantity} × ${item.selectedVariant?.price ?? item.price}</p>
+                {items.map((item) => (
+                  <div key={item._id} className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-slate-900">{item.name}</p>
+                      <p className="text-sm text-slate-500">{item.quantity} × {item.price} EGP</p>
+                    </div>
+                    <p className="font-semibold text-slate-900">{(item.price * item.quantity).toFixed(2)} EGP</p>
                   </div>
-                  <p className="font-semibold text-slate-900">${((item.selectedVariant?.price ?? item.price) * item.quantity).toFixed(2)}</p>
-                </div>
-              ))}
+                ))}
             </div>
             <div className="mt-6 rounded-3xl bg-slate-50 p-5">
               <div className="flex items-center justify-between text-sm text-slate-500">
                 <span>Order total</span>
-                <span className="font-semibold text-slate-900">${total.toFixed(2)}</span>
+                <span className="font-semibold text-slate-900">{total.toFixed(2)} EGP</span>
               </div>
             </div>
           </aside>

@@ -8,81 +8,17 @@ import { useToast } from "../context/toastContext";
 const ProductDetails = () => {
   const { pushToast } = useToast();
   const { slug } = useParams();
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<IProduct | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<string>("");
-  const [selectedOptions, setSelectedOptions] = useState<{
-    [key: string]: string;
-  }>({});
-  const { addToCart } = useCart();
-
-  const getAvailableOptions = () => {
-    if (!product?.variants) return {};
-
-    const optionsMap: { [key: string]: Set<string> } = {};
-    product.variants.forEach((variant) => {
-      variant.options.forEach((opt) => {
-        if (!optionsMap[opt.name]) {
-          optionsMap[opt.name] = new Set();
-        }
-        optionsMap[opt.name].add(opt.value);
-      });
-    });
-
-    const result: { [key: string]: string[] } = {};
-    Object.keys(optionsMap).forEach((key) => {
-      result[key] = Array.from(optionsMap[key]);
-    });
-    return result;
-  };
-
-  const availableOptions = getAvailableOptions();
-
-  const getCurrentVariant = () => {
-    if (!product?.variants) return null;
-    return product.variants.find((variant) => {
-      return variant.options.every(
-        (opt) => selectedOptions[opt.name] === opt.value,
-      );
-    });
-  };
-
-  const currentVariant = getCurrentVariant();
-
-  // Variant price replaces the main price transparently - it is NOT an option button
-  const currentPrice = currentVariant ? currentVariant.price : product?.price;
-  const currentStock = currentVariant ? currentVariant.stock : product?.stock;
-
-  // Use the STOCK option value (e.g. "10 items") if present, otherwise numeric stock
-  const stockOption = currentVariant?.options.find(
-    (opt) => opt.name.toLowerCase() === "stock",
-  );
-  const effectiveStock = stockOption
-    ? Number(stockOption.value.replace(/\D/g, "")) || 0
-    : (currentStock ?? 0);
+  const [quantity, setQuantity] = useState(1);
 
   const activeImages = useMemo(() => {
-    const variantImages = currentVariant?.images?.filter(Boolean) || [];
-    const images = variantImages.length > 0 ? variantImages : product?.images || [];
+    const images = product?.images?.filter(Boolean) || [];
     return images.length > 0 ? images : product?.image ? [product.image] : [];
-  }, [currentVariant, product]);
-
-  const handleOptionChange = (optionName: string, val: string) => {
-    // Never treat "stock" as a selectable option
-    if (optionName.toLowerCase() === "stock") return;
-
-    const nextOptions = { ...selectedOptions, [optionName]: val };
-    setSelectedOptions(nextOptions);
-
-    const nextVariant = product?.variants?.find((variant) =>
-      variant.options.every((opt) => nextOptions[opt.name] === opt.value),
-    );
-    const nextImages = nextVariant?.images?.filter(Boolean) || [];
-    if (nextImages.length > 0) {
-      setSelectedImage(nextImages[0]);
-    }
-  };
+  }, [product]);
 
   const handlePrevImage = () => {
     if (activeImages.length <= 1) return;
@@ -129,29 +65,7 @@ const ProductDetails = () => {
         }
 
         setProduct(productData);
-
-        const firstImage = productData?.images?.[0] || productData?.image || "";
-        setSelectedImage(firstImage);
-
-        if (productData?.variants && productData.variants.length > 0) {
-          const defaultValue =
-            productData.variants.find((v) => (v.stock ?? 0) > 0) ||
-            productData.variants[0];
-          const defaultOptions: { [key: string]: string } = {};
-
-          defaultValue.options.forEach((opt) => {
-            // Never auto-select a "stock" option - handled behind the scenes
-            if (opt.name.toLowerCase() !== "stock") {
-              defaultOptions[opt.name] = opt.value;
-            }
-          });
-          const defaultImages = defaultValue.images?.filter(Boolean) || [];
-          if (defaultImages.length > 0) {
-            setSelectedImage(defaultImages[0]);
-          }
-
-          setSelectedOptions(defaultOptions);
-        }
+        setSelectedImage(productData?.images?.[0] || productData?.image || "");
       } catch {
         pushToast("Unable to load product details. Please try again.", "error");
       } finally {
@@ -183,8 +97,13 @@ const ProductDetails = () => {
     );
   }
 
-  const isAvailable = effectiveStock > 0;
-  const isLowStock = isAvailable && effectiveStock <= 10;
+  const isAvailable = product.stock > 0;
+  const isLowStock = isAvailable && product.stock <= 10;
+
+  const handleAddToCart = () => {
+    addToCart(product, Math.max(1, Math.min(quantity, product.stock)));
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col bg-[#fcf9f8] text-left"
@@ -201,7 +120,6 @@ const ProductDetails = () => {
                 className="w-full h-full object-cover object-center"
               />
 
-              {/* Smooth gallery navigation */}
               {activeImages.length > 1 && (
                 <>
                   <button
@@ -237,14 +155,14 @@ const ProductDetails = () => {
               )}
             </div>
 
-            {/* Persistent real-time stock warning under product images */}
+            {/* Stock warning under product images */}
             {!isAvailable ? (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
                 Stock is finished
               </div>
             ) : isLowStock ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                ⚠ {effectiveStock} is remaining in the stock
+                ⚠ {product.stock} is remaining in the stock
               </div>
             ) : (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
@@ -276,7 +194,7 @@ const ProductDetails = () => {
             )}
           </div>
 
-          {/* قسم تفاصيل المنتج والـ Buy Actions */}
+          {/* Product details + Buy actions */}
           <div className="space-y-6">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-[#545f73] bg-[#f0edec] px-3 py-1 rounded-full">
@@ -288,62 +206,14 @@ const ProductDetails = () => {
             </div>
 
             <div className="text-2xl font-bold text-[#172820]">
-              {currentPrice}{" "}
+              {product.price}{" "}
               <span className="text-sm font-normal text-[#737874]">EGP</span>
-              {currentVariant && (
-                <span className="ml-3 text-xs font-semibold uppercase tracking-wide text-[#545f73] bg-[#f0edec] px-2.5 py-1 rounded-full">
-                  Selected variant
-                </span>
-              )}
             </div>
-
-            {Object.keys(availableOptions).length > 0 && (
-              <div className="space-y-4 py-4 border-t border-b border-[#c2c8c3]/20">
-                {Object.entries(availableOptions).map(
-                  ([optionName, values]) => {
-                    // NEVER render "stock" as a selectable option button
-                    if (optionName.toLowerCase() === "stock") return null;
-                    return (
-                      <div key={optionName} className="space-y-2">
-                        <label className="text-sm font-semibold uppercase tracking-wider text-[#172820]">
-                          {optionName}:{" "}
-                          <span className="font-normal text-[#545f73]">
-                            {selectedOptions[optionName]}
-                          </span>
-                        </label>
-                        <div className="flex gap-3 flex-wrap">
-                          {values.map((val) => {
-                            const isSelected =
-                              selectedOptions[optionName] === val;
-                            return (
-                              <button
-                                key={val}
-                                onClick={() =>
-                                  handleOptionChange(optionName, val)
-                                }
-                                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                  isSelected
-                                    ? "border-[#172820] bg-[#172820] text-white shadow-sm"
-                                    : "border-[#c2c8c3]/40 bg-white text-[#172820] hover:border-[#172820]"
-                                }`}
-                              >
-                                {val}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-            )}
 
             <p className="text-[#424844] leading-relaxed text-base border-t border-b border-[#c2c8c3]/20 py-4">
               {product.description}
             </p>
 
-            {/* تفاصيل المخزون والحالة */}
             <div className="space-y-2 text-sm text-[#737874]">
               <p>
                 Availability:{" "}
@@ -354,16 +224,46 @@ const ProductDetails = () => {
               <p>
                 Category:{" "}
                 <span className="text-[#172820] font-semibold">
-                  {product.category.name}
+                  {product.category?.name}
                 </span>
               </p>
             </div>
 
-            {/* زر إضافة للسلة */}
+            {/* Quantity selector */}
+            {isAvailable && (
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-semibold uppercase tracking-wider text-[#172820]">
+                  Quantity
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="w-9 h-9 rounded-full border border-[#c2c8c3]/40 bg-white text-[#172820] font-bold hover:border-[#172820] transition-all"
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center font-semibold text-[#172820]">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setQuantity((q) => Math.min(product.stock, q + 1))
+                    }
+                    className="w-9 h-9 rounded-full border border-[#c2c8c3]/40 bg-white text-[#172820] font-bold hover:border-[#172820] transition-all"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Add to cart button */}
             <div className="pt-4">
               <button
                 disabled={!isAvailable}
-                onClick={() => addToCart(product, 1, currentVariant ?? undefined)}
+                onClick={handleAddToCart}
                 className={`w-full py-4 rounded-full font-medium transition-all duration-300 ${
                   isAvailable
                     ? "bg-[#172820] text-white hover:bg-[#2c3e35] shadow-md hover:-translate-y-0.5"

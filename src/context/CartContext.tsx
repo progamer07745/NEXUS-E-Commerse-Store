@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { IProduct, IVariant } from "../types/product";
+import type { IProduct } from "../types/product";
 import { CartContext, type CartProduct } from "./cartContext";
 import { useToast } from "./toastContext";
 
@@ -26,19 +26,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const toast = useToast();
 
-  // Get the available stock for a product, accounting for selected variant
-  const getMaxStock = (product: IProduct, selectedVariant?: IVariant) => {
-    const stock = selectedVariant?.stock ?? product.stock;
-    return Math.max(0, Number(stock) || 0);
-  };
-
-  const addToCart = (product: IProduct, quantity = 1, selectedVariant?: IVariant) => {
+  const addToCart = (product: IProduct, quantity = 1) => {
     setItems((prevItems) => {
       const existing = prevItems.find((item) => item._id === product._id);
       const currentQty = existing?.quantity ?? 0;
-      // Use the variant that the existing item uses if no new variant was passed
-      const effectiveVariant = selectedVariant ?? existing?.selectedVariant;
-      const maxStock = getMaxStock(product, effectiveVariant);
+      const maxStock = Math.max(0, Number(product.stock) || 0);
 
       // Validate stock before adding
       if (currentQty + quantity > maxStock) {
@@ -54,7 +46,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (existing) {
         const updated = prevItems.map((item) =>
           item._id === product._id
-            ? { ...item, quantity: item.quantity + quantity, selectedVariant: effectiveVariant }
+            ? { ...item, quantity: item.quantity + quantity }
             : item,
         );
         toast.pushToast(`${product.name} quantity updated in cart`, "success");
@@ -62,7 +54,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
 
       toast.pushToast(`${product.name} added to cart`, "success");
-      return [...prevItems, { ...product, quantity, selectedVariant: effectiveVariant }];
+      return [...prevItems, { ...product, quantity }];
     });
   };
 
@@ -75,10 +67,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       prevItems
         .map((item) => {
           if (item._id !== id) return item;
-          const maxStock = getMaxStock(item, item.selectedVariant);
+          const maxStock = Math.max(0, Number(item.stock) || 0);
           const clamped = Math.min(Math.max(1, quantity), maxStock);
           if (quantity > maxStock) {
-            toast.pushToast(`Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${item.name} available`, "error");
+            toast.pushToast(
+              `Only ${maxStock} ${maxStock === 1 ? "unit" : "units"} of ${item.name} available`,
+              "error",
+            );
           }
           return { ...item, quantity: clamped };
         })
@@ -90,12 +85,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce(
-    (sum, item) => sum + (item.selectedVariant?.price ?? item.price) * item.quantity,
+    (sum, item) => sum + item.price * item.quantity,
     0,
   );
 
   const value = useMemo(
-    () => ({ items, itemCount, total, addToCart, removeFromCart, changeQuantity, clearCart }),
+    () => ({
+      items,
+      itemCount,
+      total,
+      addToCart,
+      removeFromCart,
+      changeQuantity,
+      clearCart,
+    }),
     [items, itemCount, total],
   );
 

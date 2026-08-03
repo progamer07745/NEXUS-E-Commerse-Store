@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 
 const links = [
@@ -70,12 +70,21 @@ const AdminLayout = () => {
                   Manage your store
                 </h2>
               </div>
-              <button
-                onClick={handleLogout}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                Logout
-              </button>
+
+              <div className="flex gap-2">
+                <Link
+                  to="/"
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Home
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </header>
 

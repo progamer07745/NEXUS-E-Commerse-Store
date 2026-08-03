@@ -8,18 +8,6 @@ interface ICategoryOption {
   name: string;
 }
 
-interface VariantFormOption {
-  name: string;
-  value: string;
-}
-
-interface VariantForm {
-  price: string;
-  stock: string;
-  images: string[];
-  options: VariantFormOption[];
-}
-
 interface ProductFormState {
   name: string;
   description: string;
@@ -31,15 +19,7 @@ interface ProductFormState {
   category: string;
   slug: string;
   status: string;
-  variants: VariantForm[];
 }
-
-const emptyVariant = (): VariantForm => ({
-  price: "",
-  stock: "",
-  images: [],
-  options: [{ name: "Color", value: "Default" }],
-});
 
 const createDefaultForm = (): ProductFormState => ({
   name: "",
@@ -52,7 +32,6 @@ const createDefaultForm = (): ProductFormState => ({
   category: "",
   slug: "",
   status: "active",
-  variants: [emptyVariant()],
 });
 
 const FALLBACK_IMAGE =
@@ -74,7 +53,8 @@ const AdminProducts = () => {
   };
 
   const fetchCategories = async () => {
-    const response = await api.get("/admin/categories");
+    // Public category route — plain list of categories for the form select.
+    const response = await api.get("/category");
     const items = response.data?.data?.docs ?? response.data?.data ?? [];
     setCategories(Array.isArray(items) ? items : []);
   };
@@ -104,18 +84,12 @@ const AdminProducts = () => {
       brand: product.brand || "",
       image: product.image || "",
       images: product.images || [],
-      category: typeof product.category === "object" ? product.category._id : (product.category as unknown as string) || "",
+      category:
+        typeof product.category === "object"
+          ? product.category._id
+          : (product.category as unknown as string) || "",
       slug: product.slug || "",
       status: product.status || "active",
-      variants: (product.variants || []).map((variant) => ({
-        price: String(variant.price ?? ""),
-        stock: String(variant.stock ?? ""),
-        images: variant.images || [],
-        options:
-          variant.options && variant.options.length > 0
-            ? variant.options.map((opt) => ({ name: opt.name, value: opt.value }))
-            : [{ name: "Color", value: "Default" }],
-      })),
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -125,67 +99,8 @@ const AdminProducts = () => {
     setEditingId(null);
   };
 
-  const updateVariant = (index: number, patch: Partial<VariantForm>) => {
-    setForm((prev) => ({
-      ...prev,
-      variants: prev.variants.map((variant, idx) =>
-        idx === index ? { ...variant, ...patch } : variant,
-      ),
-    }));
-  };
-
-  const updateVariantOption = (
-    variantIndex: number,
-    optionIndex: number,
-    patch: Partial<VariantFormOption>,
-  ) => {
-    setForm((prev) => ({
-      ...prev,
-      variants: prev.variants.map((variant, idx) =>
-        idx === variantIndex
-          ? {
-              ...variant,
-              options: variant.options.map((opt, optIdx) =>
-                optIdx === optionIndex ? { ...opt, ...patch } : opt,
-              ),
-            }
-          : variant,
-      ),
-    }));
-  };
-
   const buildImageList = (urls: string[]): string[] =>
     (urls || []).map((url) => url.trim()).filter((url) => url.length > 0);
-
-  const buildPayload = () => {
-    const mainImage = form.image || FALLBACK_IMAGE;
-    const imageList = buildImageList(form.images);
-    const allImages = imageList.length > 0 ? imageList : [mainImage];
-
-    const variants = form.variants.map((variant) => ({
-      options: variant.options.filter((opt) => opt.name.trim() && opt.value.trim()),
-      price: Number(variant.price),
-      stock: Number(variant.stock),
-      images:
-        buildImageList(variant.images).length > 0
-          ? buildImageList(variant.images)
-          : allImages,
-    }));
-
-    return {
-      name: form.name,
-      description: form.description,
-      price: Number(form.price),
-      stock: Number(form.stock),
-      brand: form.brand || "Generic",
-      slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
-      image: mainImage,
-      images: allImages,
-      category: form.category,
-      status: form.status,
-      variants,
-    };
-  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -197,17 +112,28 @@ const AdminProducts = () => {
     setSaving(true);
 
     try {
-      const payload = buildPayload();
+      const mainImage = form.image || FALLBACK_IMAGE;
+      const imageList = buildImageList(form.images);
+      const allImages = imageList.length > 0 ? imageList : [mainImage];
+
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        brand: form.brand || "Generic",
+        slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
+        image: mainImage,
+        images: allImages,
+        category: form.category,
+        status: form.status,
+      };
 
       if (editingId) {
         await api.patch(`/admin/products/${editingId}`, payload);
         pushToast("Product updated successfully!", "success");
       } else {
-        const response = await api.post("/admin/products", payload);
-        const createdProduct = response.data.data?.doc || response.data.data?.product;
-        if (createdProduct) {
-          setProducts((current) => [createdProduct, ...current]);
-        }
+        await api.post("/admin/products", payload);
         pushToast("Product created successfully!", "success");
       }
 
@@ -215,8 +141,8 @@ const AdminProducts = () => {
       resetForm();
     } catch (error: unknown) {
       const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Unable to save product. Please try again.";
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Unable to save product. Please try again.";
       pushToast(message, "error");
     } finally {
       setSaving(false);
@@ -227,7 +153,9 @@ const AdminProducts = () => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
       await api.delete(`/admin/products/${productId}`);
-      setProducts((current) => current.filter((product) => product._id !== productId));
+      setProducts((current) =>
+        current.filter((product) => product._id !== productId),
+      );
       pushToast("Product deleted.", "success");
     } catch {
       pushToast("Unable to delete product. Please try again.", "error");
@@ -239,7 +167,11 @@ const AdminProducts = () => {
   const labelClass = "mb-1 block text-sm font-medium text-slate-700";
 
   if (loading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-500">Loading products…</div>;
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-500">
+        Loading products…
+      </div>
+    );
   }
 
   return (
@@ -252,7 +184,7 @@ const AdminProducts = () => {
             </h3>
             <p className="mt-1 text-sm text-slate-500">
               {editingId
-                ? "Update product details and variants."
+                ? "Update product details."
                 : "Add a new product to your inventory."}
             </p>
           </div>
@@ -290,7 +222,9 @@ const AdminProducts = () => {
             <label className={labelClass}>Description</label>
             <textarea
               value={form.description}
-              onChange={(event) => setForm({ ...form, description: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, description: event.target.value })
+              }
               className={`${inputClass} min-h-24`}
               required
             />
@@ -330,7 +264,9 @@ const AdminProducts = () => {
             <label className={labelClass}>Category</label>
             <select
               value={form.category}
-              onChange={(event) => setForm({ ...form, category: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, category: event.target.value })
+              }
               className={inputClass}
               required
             >
@@ -407,179 +343,17 @@ const AdminProducts = () => {
             </button>
           </div>
 
-          {/* Variants section */}
-          <div className="md:col-span-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-lg font-semibold text-slate-900">Variants</h4>
-              <button
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, variants: [...prev.variants, emptyVariant()] }))}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                + Add variant
-              </button>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              Each variant defines price, stock and images for a combination of options (e.g. Color/Silver).
-            </p>
-
-            <div className="mt-4 space-y-4">
-              {form.variants.map((variant, variantIndex) => (
-                <div key={variantIndex} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center justify-between">
-                    <h5 className="text-sm font-semibold text-slate-700">Variant #{variantIndex + 1}</h5>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setForm((prev) => ({
-                          ...prev,
-                          variants: prev.variants.filter((_, idx) => idx !== variantIndex),
-                        }));
-                      }}
-                      disabled={form.variants.length === 1}
-                      className="text-sm text-rose-600 transition hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {variant.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex gap-2">
-                        <input
-                          value={option.name}
-                          placeholder="Option name (e.g. Color)"
-                          onChange={(event) =>
-                            updateVariantOption(variantIndex, optionIndex, { name: event.target.value })
-                          }
-                          className={inputClass}
-                        />
-                        <input
-                          value={option.value}
-                          placeholder="Value (e.g. Silver)"
-                          onChange={(event) =>
-                            updateVariantOption(variantIndex, optionIndex, { value: event.target.value })
-                          }
-                          className={inputClass}
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              variants: prev.variants.map((v, idx) =>
-                                idx === variantIndex
-                                  ? { ...v, options: v.options.filter((_, oi) => oi !== optionIndex) }
-                                  : v,
-                              ),
-                            }))
-                          }
-                          className="shrink-0 text-sm text-rose-600 transition hover:text-rose-700"
-                          title="Remove option"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          variants: prev.variants.map((v, idx) =>
-                            idx === variantIndex
-                              ? { ...v, options: [...v.options, { name: "", value: "" }] }
-                              : v,
-                          ),
-                        }))
-                      }
-                      className="justify-self-start rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-white"
-                    >
-                      + Option
-                    </button>
-                  </div>
-
-                  <div className="mt-3 grid gap-3 md:grid-cols-4">
-                    <div>
-                      <label className={labelClass}>Price</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={variant.price}
-                        onChange={(event) => updateVariant(variantIndex, { price: event.target.value })}
-                        className={inputClass}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Stock</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={variant.stock}
-                        onChange={(event) => updateVariant(variantIndex, { stock: event.target.value })}
-                        className={inputClass}
-                        required
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className={labelClass}>Variant images</label>
-                      <div className="space-y-2">
-                        {variant.images.map((imageUrl, imageIndex) => (
-                          <div key={imageIndex} className="flex gap-2">
-                            <input
-                              value={imageUrl}
-                              onChange={(event) =>
-                                updateVariant(variantIndex, {
-                                  images: variant.images.map((url, i) =>
-                                    i === imageIndex ? event.target.value : url,
-                                  ),
-                                })
-                              }
-                              className={inputClass}
-                              placeholder={`Variant image ${imageIndex + 1} URL`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateVariant(variantIndex, {
-                                  images: variant.images.filter((_, i) => i !== imageIndex),
-                                })
-                              }
-                              className="shrink-0 rounded-lg border border-rose-300 px-3 py-2 text-sm text-rose-600 transition hover:bg-rose-50"
-                              title="Remove image"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateVariant(variantIndex, {
-                            images: [...variant.images, ""],
-                          })
-                        }
-                        className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-white"
-                      >
-                        + Add Image
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="md:col-span-2 flex gap-3">
             <button
               type="submit"
               disabled={saving}
               className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-70"
             >
-              {saving ? "Saving..." : editingId ? "Update product" : "Create product"}
+              {saving
+                ? "Saving..."
+                : editingId
+                ? "Update product"
+                : "Create product"}
             </button>
             {editingId && (
               <button
@@ -612,11 +386,17 @@ const AdminProducts = () => {
               {products.map((product) => (
                 <tr key={product._id} className="border-b border-slate-100">
                   <td className="px-3 py-3">
-                    <div className="font-medium text-slate-900">{product.name}</div>
+                    <div className="font-medium text-slate-900">
+                      {product.name}
+                    </div>
                     <div className="text-slate-500">{product.brand}</div>
                   </td>
-                  <td className="px-3 py-3 text-slate-600">{product.category?.name || "—"}</td>
-                  <td className="px-3 py-3 text-slate-700">{product.price} EGP</td>
+                  <td className="px-3 py-3 text-slate-600">
+                    {product.category?.name || "—"}
+                  </td>
+                  <td className="px-3 py-3 text-slate-700">
+                    {product.price} EGP
+                  </td>
                   <td className="px-3 py-3 text-slate-700">{product.stock}</td>
                   <td className="px-3 py-3">
                     <span

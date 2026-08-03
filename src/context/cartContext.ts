@@ -1,16 +1,15 @@
 import { createContext, useContext } from "react";
-import type { IProduct, IVariant } from "../types/product";
+import type { IProduct } from "../types/product";
 
 export interface CartProduct extends IProduct {
   quantity: number;
-  selectedVariant?: IVariant;
 }
 
 export interface CartContextType {
   items: CartProduct[];
   itemCount: number;
   total: number;
-  addToCart: (product: IProduct, quantity?: number, selectedVariant?: IVariant) => void;
+  addToCart: (product: IProduct, quantity?: number) => void;
   removeFromCart: (id: string) => void;
   changeQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
